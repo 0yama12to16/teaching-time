@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teaching Time Without Losing General Retrieval</title>
+  <meta name="description" content="Adapting MLLM-based video embedding models to time-sensitive text-to-video retrieval while keeping general retrieval, with one model and one vector per clip.">
+  <meta name="author" content="Toya Oyama, Rainer Lienhart, Shin'ichi Satoh">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Teaching Time Without Losing General Retrieval">
+  <meta property="og:description" content="Time-sensitive video retrieval rises, general retrieval stays. One model, one vector per clip.">
+  <meta name="citation_title" content="Teaching Time Without Losing General Retrieval: Adapting Multimodal Embeddings for Time-Sensitive Video Retrieval">
+  <meta name="citation_author" content="Oyama, Toya">
+  <meta name="citation_author" content="Lienhart, Rainer">
+  <meta name="citation_author" content="Satoh, Shin'ichi">
+  <meta name="citation_publication_date" content="2026/11/24">
+  <meta name="citation_arxiv_id" content="2611.32971">
+  <meta name="citation_pdf_url" content="https://arxiv.org/pdf/2611.32971">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d56a5'/%3E%3Cpath d='M7 12h16l-4-4M25 20H9l4 4' fill='none' stroke='white' stroke-width='2.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/page.css">
+</head>
+<body>
+<main>
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop has-text-centered">
+      <h1 class="title is-2 publication-title">Teaching Time Without Losing General Retrieval</h1>
+      <p class="paper-sub">Adapting Multimodal Embeddings for Time-Sensitive Video Retrieval</p>
+      <div class="is-size-5 publication-authors">
+        <span class="author-block">Toya Oyama<sup>1,2</sup></span>
+        <span class="author-block">Rainer Lienhart<sup>3</sup></span>
+        <span class="author-block">Shin'ichi Satoh<sup>2,1</sup></span>
+      </div>
+      <div class="affils">
+        <span><sup>1</sup>The University of Tokyo</span>
+        <span><sup>2</sup>National Institute of Informatics</span>
+        <span><sup>3</sup>University of Augsburg</span>
+      </div>
+      <div class="publication-links links">
+        <a class="button is-normal is-rounded is-dark" href="https://arxiv.org/pdf/2611.32971" target="_blank" rel="noopener">Paper</a>
+        <a class="button is-normal is-rounded is-dark" href="https://arxiv.org/abs/2611.32971" target="_blank" rel="noopener">arXiv</a>
+        <span class="button is-normal is-rounded code-off" role="link" aria-disabled="true">Code</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="demo">
+      <figure class="clip">
+        <img id="fwd" src="static/images/cup0.png" alt="Forward clip: a hand moves a cup to the right">
+        <figcaption><span class="tag-f">forward clip</span> <em>a hand <b class="c-f">pushes</b> a cup</em></figcaption>
+      </figure>
+      <figure class="clip">
+        <img id="rev" src="static/images/cup3.png" alt="Reversed clip: the same frames in reverse order">
+        <figcaption><span class="tag-r">reversed clip</span> <em>a hand <b class="c-r">pulls</b> a cup</em></figcaption>
+      </figure>
+    </div>
+    <div class="has-text-centered"><button class="button is-small is-rounded" id="toggle" type="button">Pause</button></div>
+    <p class="lead">The two clips show the same frames in opposite order, and their queries differ in one word. The base model barely separates such clips (mean cosine 0.95 on RTime). We teach it the difference while keeping general retrieval.</p>
+    <div class="nums">
+      <div><b class="kept">58.4 <small>✓ kept</small></b><span>General R@1, same as the base model<br>(mean of six benchmarks)</span></div>
+      <div><b>55.5 → 63.2 <small>↑ +7.7</small></b><span>RTime Hard R@1<br>(each clip's reversed copy in the gallery)</span></div>
+      <div><b>0.15%</b><span>of the parameters trained<br>(LoRA; output heads come on top)</span></div>
+    </div>
+    <p class="note">Qwen3-VL-Embedding-8B, Ours against the base model, mean of three seeds.</p>
+  </div>
+</section>
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Abstract</h2>
+    <div class="content has-text-justified abstract">
+      <p>In text-to-video retrieval, MLLM-based embedding models do well when the text describes the scene (general retrieval), but poorly when it describes actions and their direction (time-sensitive retrieval). TARA, a pioneering work, fine-tunes such a model on text triplets with temporal hard negatives; it improves time-sensitive retrieval but lowers general retrieval (mean R@1 over six benchmarks in our rerun on Qwen3-VL-Embedding-8B: 58.4 → 44.8), and its released model keeps general retrieval only when ensembled with Qwen3-VL-Embedding. Our goal is strong general and time-sensitive retrieval with one model and one vector per clip. Three findings lead to three simple components.</p>
+      <p><em>Keep loss:</em> general retrieval follows how far the output embeddings drift from the base model, not how far the weights move; we therefore keep them near the base model, which keeps most general retrieval even without general-domain data. <em>Pair loss:</em> the text embeddings of an action description and its reversed-direction version are well separated, but the video embeddings of a clip and its reversed copy are close; we therefore widen the gap between the video embeddings of each clip and its reversed copy, in the direction of the difference between their two text embeddings. <em>Middle-layer LoRA:</em> frames are combined in the middle layers, and temporal information peaks in or just after them; we therefore train LoRA only on these layers, which nearly matches training all weights on most time-sensitive benchmarks with 0.15% of the parameters and keeps general retrieval better.</p>
+      <p>General R@1 stays at 58.4, while R@1 with each clip's reversed copy in the gallery rises from 55.5 to 63.2; the gains carry over to unseen benchmarks and InternVL2-8B-RA. The keep loss is also a remedy for the TARA recipe (general R@1: 44.8 → 57.8), and ensembling TARA with Ours gives the highest scores on RTime and unseen CiA among the compared models.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Three observations</h2>
+    <div class="obs">
+      <div><h3>1. Training breaks neighborhoods</h3><p>Training for time changes which clips are close to each other, and general R@1 falls (58.4 to 50.1 with all weights).</p></div>
+      <div><h3>2. Video barely separates direction</h3><p>Text embeddings of the forward and reversed queries differ clearly (0.669), but the clip embeddings much less (0.290), and the two differences are nearly orthogonal.</p></div>
+      <div><h3>3. Frames meet in the middle layers</h3><p>Blocking attention between frames from layer 12 lowers CiA-SSv2 Chiral by 10.6 points, but from layer 24 by at most 0.5.</p></div>
+    </div>
+    <figure class="fig"><img src="static/images/motivation.png" alt="Neighbor overlap after Plain training, and the video direction compared with the language direction"><figcaption>Observations 1 and 2. (a) Neighbor overlap of MSR-VTT test clips after Plain training of all weights, with general R@1. (b) In the base model, the video direction is less than half as long as the language direction and nearly orthogonal to it.</figcaption></figure>
+    <figure class="fig"><img src="static/images/layers.png" alt="Per-layer retrieval scores and linear probes of the base models"><figcaption>Observation 3. (a, b) Retrieval from each layer of the frozen models (compare the shapes of the curves, not the values). (c) Linear probes without text on Qwen.</figcaption></figure>
+  </div>
+</section>
+
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Method</h2>
+    <figure class="fig"><img src="static/images/method.png" alt="Method: LoRA on the middle layers for video, frozen language model for text, two output heads, keep loss and pair loss"><figcaption>Video passes through the language model with LoRA on the middle layers, text through the same model without LoRA. Two output heads give one vector per clip and per query. Embedding space: schematic.</figcaption></figure>
+    <div class="obs">
+      <div><h3>Keep loss</h3><p>Holds the output embeddings of video and text near those of the base model.</p></div>
+      <div><h3>Pair loss</h3><p>Makes each query prefer the clip of its own direction, pushing a clip away from its reversed copy.</p></div>
+      <div><h3>Middle-layer LoRA</h3><p>Trains only the layers that combine frames (12–23 on Qwen).</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Results</h2>
+    <figure class="fig narrow"><img src="static/images/tradeoff.png" alt="General R@1 against the mean of five time-sensitive scores; Ours raises time-sensitive retrieval and keeps general retrieval"><figcaption>General R@1 (mean of six) against the mean of five time-sensitive scores. ⊕: the released TARA model ensembled with a second model.</figcaption></figure>
+    <div class="tbl"><table>
+      <caption>Main results on Qwen3-VL-Embedding-8B (%, mean of three seeds). General: mean R@1 of six benchmarks. Hard, Binary: RTime (R@1, accuracy). CiA: Chiral mAP on opposite actions. SSv2-T: R@1. <sup>*</sup>Unseen in training. Bold: best per column. Our training data include the SSv2-T template names (with other clips).</caption>
+      <thead><tr><th></th><th>General</th><th>Hard</th><th>Binary</th><th>CiA-Charades<sup>*</sup></th><th>CiA-EPIC<sup>*</sup></th><th>SSv2-T</th></tr></thead>
+      <tbody>
+        <tr><td>No tuning</td><td><b>58.4</b></td><td>55.5</td><td>62.8</td><td>61.7</td><td>62.7</td><td>22.4</td></tr>
+        <tr><td>Plain (LoRA)</td><td>54.7</td><td>57.8</td><td>68.7</td><td>71.4</td><td><b>75.6</b></td><td>63.2</td></tr>
+        <tr><td>Plain (all weights)</td><td>50.1</td><td>59.7</td><td>70.7</td><td>70.3</td><td>72.6</td><td><b>64.8</b></td></tr>
+        <tr><td>TARA recipe (our rerun)</td><td>44.8</td><td>57.2</td><td><b>75.1</b></td><td>67.8</td><td>75.0</td><td>30.8</td></tr>
+        <tr class="ours"><td>Ours</td><td><b>58.4</b></td><td>63.2</td><td>72.0</td><td><b>72.4</b></td><td>75.3</td><td>51.9</td></tr>
+        <tr class="ours"><td>Ours (all weights)</td><td>57.5</td><td><b>64.2</b></td><td>73.5</td><td>72.3</td><td>75.2</td><td>64.4</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="fig narrow"><img src="static/images/reversal.png" alt="Reversal test: scores of original and reversed clips"><figcaption>Reversal test. Solid: original clips. Dashed: the same clips reversed, scored against the original text. On CiA, Ours raises the solid line and lowers the dashed one, so it uses the frame order.</figcaption></figure>
+    <div class="limits"><h3>Limitations</h3><p>The trade-off is softened, not removed: Plain and all-weight training are higher on some time-sensitive columns. The SSv2-T gain comes from training on the template names. On unseen CiA the gain is on opposite actions; with other actions in the gallery, scores can fall (CiA-Charades Static −5.1).</p></div>
+  </div>
+</section>
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <div class="bib-h"><h2 class="title is-3">BibTeX</h2><button class="button is-small is-rounded" id="copy" type="button">Copy</button></div>
+    <pre><code id="bib">@article{oyama2026teaching,
+  title   = {Teaching Time Without Losing General Retrieval: Adapting Multimodal Embeddings for Time-Sensitive Video Retrieval},
+  author  = {Oyama, Toya and Lienhart, Rainer and Satoh, Shin'ichi},
+  journal = {arXiv preprint arXiv:2611.32971},
+  year    = {2026}
+}</code></pre>
+  </div>
+</section>
+</main>
+
+<footer class="footer"><div class="container is-max-desktop has-text-centered">
+  <p>This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank" rel="noopener">Academic Project Page Template</a>, which was adopted from the <a href="https://nerfies.github.io" target="_blank" rel="noopener">Nerfies</a> project page. This website is licensed under a <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">Creative Commons Attribution-ShareAlike 4.0 International License</a>.</p>
+</div></footer>
+
+<script>
+(function () {
+  var n = 4, t = 0, on = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var f = document.getElementById('fwd'), r = document.getElementById('rev'), b = document.getElementById('toggle');
+  function show() { f.src = 'static/images/cup' + t + '.png'; r.src = 'static/images/cup' + (n - 1 - t) + '.png'; }
+  function label() { b.textContent = on ? 'Pause' : 'Play'; }
+  setInterval(function () { if (on) { t = (t + 1) % n; show(); } }, 700);
+  b.addEventListener('click', function () { on = !on; label(); }); label();
+  var c = document.getElementById('copy');
+  c.addEventListener('click', function () {
+    navigator.clipboard.writeText(document.getElementById('bib').textContent).then(function () {
+      c.textContent = 'Copied'; setTimeout(function () { c.textContent = 'Copy'; }, 1500);
+    }, function () { var s = getSelection(), g = document.createRange(); g.selectNodeContents(document.getElementById('bib')); s.removeAllRanges(); s.addRange(g); });
+  });
+})();
+</script>
+</body>
+</html>
